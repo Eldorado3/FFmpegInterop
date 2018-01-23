@@ -36,7 +36,7 @@
                     <TextBlock x:Name="Header" Text="Open Local File or URI"/>
                     <StackPanel Orientation="Horizontal">
                         <AppBarButton Content="Open Local File" Icon="OpenFile" Margin="0, 10, 10, 0" Click="OpenLocalFile"/>
-                        <TextBox PlaceholderText="Enter URI and press Enter" InputScope="Url" Width="210" Height="30" KeyUp="URIBoxKeyUp"/>
+                        <TextBox PlaceholderText="Enter URI and press Enter" InputScope="Url" Width="210" Height="30" KeyUp="URIBoxKeyUp" Text="rtmp://192.168.50.208:1935/live/test"/>
                     </StackPanel>
                     <ToggleSwitch x:Name="toggleSwitchAudioDecode" Header="Force Decode Audio" OffContent="OFF" OnContent="ON" IsOn="False"/>
                     <ToggleSwitch x:Name="toggleSwitchVideoDecode" Header="Force Decode Video" OffContent="OFF" OnContent="ON" IsOn="False"/>
@@ -44,12 +44,9 @@
             </SplitView.Pane>
 
             <!-- Main content -->
-            <MediaElement x:Name="mediaElement"
-                        AreTransportControlsEnabled="True"
-                        AudioCategory="ForegroundOnlyMedia"
-                        AutoPlay="True"
-                        MediaFailed="MediaFailed"
-            />
+            <MediaPlayerElement x:Name="mediaElement"/>
+
+
 
         </SplitView>
 

@@ -287,6 +287,12 @@ HRESULT FFmpegInteropMSS::InitFFmpegContext(bool forceAudioDecode, bool forceVid
 
 	if (SUCCEEDED(hr))
 	{
+		//binxie, optimize delay
+		avFormatCtx->flags |= AVFMT_FLAG_NOBUFFER;
+		avFormatCtx->probesize = 4096;
+		avFormatCtx->max_analyze_duration = 0;		
+		avFormatCtx->avio_flags |= AVIO_FLAG_DIRECT;		
+
 		if (avformat_find_stream_info(avFormatCtx, NULL) < 0)
 		{
 			hr = E_FAIL; // Error finding info
@@ -498,7 +504,7 @@ HRESULT FFmpegInteropMSS::InitFFmpegContext(bool forceAudioDecode, bool forceVid
 			else
 			{
 				// Set buffer time to 0 for realtime streaming to reduce latency
-				mss->BufferTime = { 0 };
+				mss->BufferTime = { 0 };				
 			}
 
 			startingRequestedToken = mss->Starting += ref new TypedEventHandler<MediaStreamSource ^, MediaStreamSourceStartingEventArgs ^>(this, &FFmpegInteropMSS::OnStarting);
@@ -601,7 +607,7 @@ HRESULT FFmpegInteropMSS::CreateAudioStreamDescriptor(bool forceAudioDecode)
 
 HRESULT FFmpegInteropMSS::CreateVideoStreamDescriptor(bool forceVideoDecode)
 {
-	VideoEncodingProperties^ videoProperties;
+	VideoEncodingProperties^ videoProperties;	
 
 	if (avVideoCodecCtx->codec_id == AV_CODEC_ID_H264 && !forceVideoDecode)
 	{
@@ -609,6 +615,8 @@ HRESULT FFmpegInteropMSS::CreateVideoStreamDescriptor(bool forceVideoDecode)
 		videoProperties->ProfileId = avVideoCodecCtx->profile;
 		videoProperties->Height = avVideoCodecCtx->height;
 		videoProperties->Width = avVideoCodecCtx->width;
+
+		
 
 		// Check for H264 bitstream flavor. H.264 AVC extradata starts with 1 while non AVC one starts with 0
 		if (avVideoCodecCtx->extradata != nullptr && avVideoCodecCtx->extradata_size > 0 && avVideoCodecCtx->extradata[0] == 1)

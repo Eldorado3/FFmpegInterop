@@ -39,5 +39,8 @@ namespace MediaPlayerCPP
 		void DisplayErrorMessage(Platform::String^ message);
 
 		FFmpegInterop::FFmpegInteropMSS^ FFmpegMSS;
+		Windows::Media::Playback::MediaPlayer^ mediaPlayer;
+		void mediaPlayer_VideoFrameAvailable(Windows::Media::Playback::MediaPlayer^ sender, Platform::Object^ args);
+		bool GotFirst;
 	};
 }

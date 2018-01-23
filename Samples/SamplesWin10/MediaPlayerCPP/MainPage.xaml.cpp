@@ -24,6 +24,11 @@
 #include "pch.h"
 #include "MainPage.xaml.h"
 
+extern "C"
+{
+#include <libavutil/time.h>
+}
+
 using namespace FFmpegInterop;
 using namespace MediaPlayerCPP;
 
@@ -31,7 +36,9 @@ using namespace concurrency;
 using namespace Platform;
 using namespace Windows::Foundation;
 using namespace Windows::Foundation::Collections;
+using namespace Windows::Media;
 using namespace Windows::Media::Core;
+using namespace Windows::Media::Playback;
 using namespace Windows::Storage;
 using namespace Windows::Storage::Pickers;
 using namespace Windows::Storage::Streams;
@@ -50,6 +57,14 @@ MainPage::MainPage()
 
 	// Show the control panel on startup so user can start opening media
 	Splitter->IsPaneOpen = true;
+	mediaPlayer = ref new MediaPlayer();
+	mediaPlayer->RealTimePlayback = true;
+	//mediaPlayer->IsVideoFrameServerEnabled = true;
+	//mediaPlayer->VideoFrameAvailable += ref new TypedEventHandler<MediaPlayer^, Platform::Object^>(this, &MainPage::mediaPlayer_VideoFrameAvailable);
+
+	GotFirst = false;
+	mediaElement->SetMediaPlayer(mediaPlayer);
+
 }
 
 void MainPage::OpenLocalFile(Platform::Object^ sender, Windows::UI::Xaml::RoutedEventArgs^ e)
@@ -64,7 +79,7 @@ void MainPage::OpenLocalFile(Platform::Object^ sender, Windows::UI::Xaml::Routed
 	{
 		if (file != nullptr)
 		{
-			mediaElement->Stop();
+			//mediaElement->Stop();
 
 			// Open StorageFile as IRandomAccessStream to be passed to FFmpegInteropMSS
 			create_task(file->OpenAsync(FileAccessMode::Read)).then([this, file](task<IRandomAccessStream^> stream)
@@ -85,7 +100,11 @@ void MainPage::OpenLocalFile(Platform::Object^ sender, Windows::UI::Xaml::Routed
 						if (mss)
 						{
 							// Pass MediaStreamSource to Media Element
-							mediaElement->SetMediaStreamSource(mss);
+							//mediaElement->SetMediaStreamSource(mss);
+							MediaSource^ source = MediaSource::CreateFromMediaStreamSource(mss);
+							mediaPlayer->Source = source;
+
+							mediaPlayer->Play();
 
 							// Close control panel after file open
 							Splitter->IsPaneOpen = false;
@@ -127,11 +146,13 @@ void MainPage::URIBoxKeyUp(Platform::Object^ sender, Windows::UI::Xaml::Input::K
 		PropertySet^ options = ref new PropertySet();
 
 		// Below are some sample options that you can set to configure RTSP streaming
-		// options->Insert("rtsp_flags", "prefer_tcp");
-		// options->Insert("stimeout", 100000);
+		 //options->Insert("rtsp_flags", "prefer_tcp");
+		options->Insert("rtmp_buffer", 0);
+		options->Insert("rtmp_live", "live");
 
 		// Instantiate FFmpegInteropMSS using the URI
-		mediaElement->Stop();
+		
+		//mediaElement->Stop();
 		FFmpegMSS = FFmpegInteropMSS::CreateFFmpegInteropMSSFromUri(uri, forceDecodeAudio, forceDecodeVideo, options);
 		if (FFmpegMSS != nullptr)
 		{
@@ -140,7 +161,11 @@ void MainPage::URIBoxKeyUp(Platform::Object^ sender, Windows::UI::Xaml::Input::K
 			if (mss)
 			{
 				// Pass MediaStreamSource to Media Element
-				mediaElement->SetMediaStreamSource(mss);
+				//mediaElement->SetMediaStreamSource(mss);
+				MediaSource^ source = MediaSource::CreateFromMediaStreamSource(mss);
+				mediaPlayer->Source = source;
+
+				mediaPlayer->Play();
 
 				// Close control panel after opening media
 				Splitter->IsPaneOpen = false;
@@ -167,4 +192,18 @@ void MainPage::DisplayErrorMessage(Platform::String^ message)
 	// Display error message
 	auto errorDialog = ref new MessageDialog(message);
 	errorDialog->ShowAsync();
+}
+
+void MainPage::mediaPlayer_VideoFrameAvailable(MediaPlayer^ sender, Object^ args)
+{
+	if (!GotFirst) {
+
+		double mpSeconds = av_gettime() / 1000000.0;
+		wchar_t buffer[250];
+		swprintf_s(buffer, L"first media player frame available at: %f", mpSeconds);
+		OutputDebugStringW(buffer);
+
+		GotFirst = true;
+	}	
+
 }

@@ -21,6 +21,11 @@
 #include "FFmpegInteropMSS.h"
 #include "FFmpegReader.h"
 
+extern "C"
+{
+#include <libavutil/time.h>
+}
+
 using namespace FFmpegInterop;
 
 MediaSampleProvider::MediaSampleProvider(
@@ -202,7 +207,8 @@ HRESULT FFmpegInterop::MediaSampleProvider::GetNextPacket(DataWriter ^ writer, L
 			if (!frameComplete)
 			{
 				m_isDiscontinuous = true;
-				if (allowSkip && errorCount++ < 10)
+				if (allowSkip )
+					//&& errorCount++ < 10)
 				{
 					// skip a few broken packets (maybe make this configurable later)
 					DebugMessage(L"Skipping broken packet\n");
@@ -224,6 +230,15 @@ HRESULT FFmpegInterop::MediaSampleProvider::GetNextPacket(DataWriter ^ writer, L
 
 			//in some real-time streams framePts is less than 0 so we need to make sure m_startOffset is never negative
 			m_startOffset = framePts < 0 ? 0 : framePts;
+
+			double startSeconds = LONGLONG(av_q2d(m_pAvFormatCtx->streams[m_streamIndex]->time_base) * m_startOffset);
+			double avSeconds = av_gettime() / 1000000.0;
+			
+			wchar_t buffer[250];
+			swprintf_s(buffer, L"first video frame arrived at: %f", avSeconds);
+			DebugMessage(buffer);
+
+			
 		}
 
 		pts = LONGLONG(av_q2d(m_pAvFormatCtx->streams[m_streamIndex]->time_base) * 10000000 * (framePts - m_startOffset));

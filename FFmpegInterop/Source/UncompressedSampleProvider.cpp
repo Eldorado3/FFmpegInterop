@@ -35,8 +35,13 @@ HRESULT UncompressedSampleProvider::ProcessDecodedFrame(DataWriter^ dataWriter)
 // Return S_FALSE for an incomplete frame
 HRESULT UncompressedSampleProvider::GetFrameFromFFmpegDecoder(AVPacket* avPacket)
 {
+
+	DebugMessage(L"Decoding packet \n");
+
 	HRESULT hr = S_OK;
 	int decodeFrame = 0;
+
+	int ret = AVERROR(EAGAIN);
 
 	if (avPacket != nullptr)
 	{
@@ -45,6 +50,7 @@ HRESULT UncompressedSampleProvider::GetFrameFromFFmpegDecoder(AVPacket* avPacket
 		{
 			// The decoder should have been drained and always ready to access input
 			_ASSERT(FALSE);
+			DebugMessage(L"Decoder didn't return EAGAIN when feeding packet\n");
 			hr = E_UNEXPECTED;
 		}
 		else if (sendPacketResult < 0)
@@ -54,6 +60,64 @@ HRESULT UncompressedSampleProvider::GetFrameFromFFmpegDecoder(AVPacket* avPacket
 			DebugMessage(L"Decoder failed on the sample\n");
 		}
 	}
+
+	/*
+	if (SUCCEEDED(hr))
+	{
+		//binxie: drain the decoder 
+		AVFrame *pFrame = av_frame_alloc();
+
+		bool GotFrame = false;
+
+		do {
+			ret = avcodec_receive_frame(m_pAvCodecCtx, pFrame);
+
+			if (ret == AVERROR_EOF) {
+				avcodec_flush_buffers(m_pAvCodecCtx);
+				av_frame_unref(pFrame);
+				av_frame_free(&pFrame);
+				DebugMessage(L"reaching EOF \n");
+			}
+
+			if (ret >= 0) {
+				m_pAvFrame = pFrame;
+				GotFrame = true;
+
+				DebugMessage(L"Drain 1 frame\n");
+			}
+
+			//what if there is some other error??
+
+			if (ret < 0 && ret != AVERROR(EAGAIN)) {
+
+				hr = E_FAIL;
+				av_frame_unref(pFrame);
+				av_frame_free(&pFrame);
+				DebugMessage(L"Failed to get a frame from the decoder\n");
+
+				return hr;
+			}
+
+		} while (ret != AVERROR(EAGAIN));
+
+		if (ret == AVERROR(EAGAIN) && !GotFrame) {
+
+			// The decoder doesn't have enough data to produce a frame,
+			// return S_FALSE to indicate a partial frame
+			hr = S_FALSE;
+			av_frame_unref(pFrame);
+			av_frame_free(&pFrame);
+
+			DebugMessage(L"Don't have enough info to decode\n");
+		}
+		else {
+
+			DebugMessage(L"Got frame\n");
+		}
+	
+	} */
+
+	
 	if (SUCCEEDED(hr))
 	{
 		AVFrame *pFrame = av_frame_alloc();
@@ -81,6 +145,8 @@ HRESULT UncompressedSampleProvider::GetFrameFromFFmpegDecoder(AVPacket* avPacket
 			m_pAvFrame = pFrame;
 		}
 	}
+
+	
 
 	return hr;
 }
